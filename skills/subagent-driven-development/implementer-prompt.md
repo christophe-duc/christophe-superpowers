@@ -34,8 +34,7 @@ Subagent (general-purpose):
     Once you're clear on requirements:
     1. Implement exactly what the task specifies
     2. Write tests (following TDD if task says to)
-    3. Verify implementation works
-    4. Commit your work
+    3. Verify: run the focused test(s) for the code you changed (RED then GREEN) plus lint/type/build. Do **not** run the full suite — the human runs it.
     5. Self-review (see below)
     6. Report back
 
@@ -44,8 +43,8 @@ Subagent (general-purpose):
     **While you work:** If you encounter something unexpected or unclear, **ask questions**.
     It's always OK to pause and clarify. Don't guess or make assumptions.
 
-    While iterating, run the focused test for what you're changing; run the
-    full suite once before committing, not after every edit.
+    While iterating, run the focused test for what you're changing as you
+    iterate. Do not run the full suite — the human runs it at the end.
 
     ## Code Organization
 
@@ -106,9 +105,10 @@ Subagent (general-purpose):
 
     ## After Review Findings
 
-    If a reviewer finds issues and you fix them, re-run the tests that cover
-    the amended code and append the results to your report file. Reviewers
-    will not re-run tests for you — your report is the test evidence.
+    If a reviewer finds issues and you fix them, re-run the focused tests that
+    cover the amended code (focused tests, not the full suite) and append the
+    results to your report file. Reviewers will not re-run tests for you — your
+    report is the test evidence.
 
     ## Report Format
 
@@ -125,8 +125,7 @@ Subagent (general-purpose):
     Then report back with ONLY (under 15 lines — the detail lives in the
     report file):
     - **Status:** DONE | DONE_WITH_CONCERNS | BLOCKED | NEEDS_CONTEXT
-    - Commits created (short SHA + subject)
-    - One-line test summary (e.g. "14/14 passing, output pristine")
+    - Focused-test summary + note the full suite is left for the human (e.g. "focused tests 6/6 pass, full suite not run")
     - Your concerns, if any
     - The report file path
 

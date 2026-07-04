@@ -1,24 +1,32 @@
 #!/usr/bin/env bash
-# Generate a review package: commit list, stat summary, and the net
-# diff with extended context, written to a file the reviewer reads in one
-# call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
-# tasks intact.
+# Generate a review package: stat summary and net diff with extended context,
+# written to a file the reviewer reads in one call.
 #
-# Usage: review-package BASE HEAD [OUTFILE]
-# Default OUTFILE: <repo-root>/.superpowers/sdd/review-<base7>..<head7>.diff
-# (named per range, so a re-review after fixes gets a distinct fresh file).
+# Diffs are tree-object to tree-object (never commit ranges), so this works
+# whether or not any commits have been made. Pass a baseline tree recorded
+# by snapshot-tree before the phase started, and optionally a head tree
+# (defaults to the current working tree via snapshot-tree).
+#
+# Usage: review-package BASE_TREE [HEAD_TREE] [OUTFILE]
+# Default OUTFILE: <sdd-workspace>/review-<base7>..<head7>.diff
 set -euo pipefail
 
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-  echo "usage: review-package BASE HEAD [OUTFILE]" >&2
+if [ $# -lt 1 ] || [ $# -gt 3 ]; then
+  echo "usage: review-package BASE_TREE [HEAD_TREE] [OUTFILE]" >&2
   exit 2
 fi
 
 base=$1
-head=$2
 
-git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
-git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+# Resolve HEAD_TREE: use provided or snapshot current working tree
+if [ $# -ge 2 ]; then
+  head=$2
+else
+  head=$("$(cd "$(dirname "$0")" && pwd)/snapshot-tree")
+fi
+
+git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE_TREE: $base" >&2; exit 2; }
+git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD_TREE: $head" >&2; exit 2; }
 
 if [ $# -eq 3 ]; then
   out=$3
@@ -29,16 +37,13 @@ fi
 
 {
   echo "# Review package: ${base}..${head}"
+  echo "(working-tree diff — no commits required)"
   echo
-  echo "## Commits"
-  git log --oneline "${base}..${head}"
-  echo
-  echo "## Files changed"
-  git diff --stat "${base}..${head}"
+  echo "## Files changed since phase baseline"
+  git diff --stat "$base" "$head"
   echo
   echo "## Diff"
-  git diff -U10 "${base}..${head}"
+  git diff -U10 "$base" "$head"
 } > "$out"
 
-commits=$(git rev-list --count "${base}..${head}")
-echo "wrote ${out}: ${commits} commit(s), $(wc -c < "$out" | tr -d ' ') bytes"
+echo "wrote ${out}: $(wc -c < "$out" | tr -d ' ') bytes"

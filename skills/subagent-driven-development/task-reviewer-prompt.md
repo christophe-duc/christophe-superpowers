@@ -31,17 +31,17 @@ Subagent (general-purpose):
 
     ## Diff Under Review
 
-    **Base:** [BASE_SHA]
-    **Head:** [HEAD_SHA]
+    **Base tree:** [BASE_TREE]
+    **Head tree:** [HEAD_TREE]
     **Diff file:** [DIFF_FILE]
 
-    Read the diff file once — it contains the commit list, a stat summary,
-    and the full diff with surrounding context, and it is your view of the
-    change. The diff's context lines ARE the changed files: do not Read a
-    changed file separately unless a hunk you must judge is cut off
-    mid-function — and say so in your report. Do not re-run git commands.
+    Read the diff file once — it contains a stat summary and the full diff
+    with surrounding context, and it is your view of the change. The diff's
+    context lines ARE the changed files: do not Read a changed file
+    separately unless a hunk you must judge is cut off mid-function — and
+    say so in your report. Do not re-run git commands.
     If the diff file is missing, fetch the diff yourself:
-    `git diff --stat [BASE_SHA]..[HEAD_SHA]` and `git diff [BASE_SHA]..[HEAD_SHA]`.
+    `git diff --stat [BASE_TREE] [HEAD_TREE]` and `git diff [BASE_TREE] [HEAD_TREE]`.
     Do not crawl the broader codebase. Inspect code outside the diff only
     to evaluate a concrete risk you can name — one focused check per named
     risk, and name both the risk and what you checked in your report.
@@ -63,17 +63,15 @@ Subagent (general-purpose):
 
     ## Tests
 
-    The implementer already ran the tests and reported results with TDD
-    evidence for exactly this code. Do not re-run the suite to confirm their
-    report. Run a test only when reading the code raises a specific doubt
-    that no existing run answers — and then a focused test, never a
-    package-wide suite, race detector run, or repeated/high-count loop. If
-    heavy validation seems warranted, recommend it in your report instead of
-    running it. If you cannot run commands in this environment, name the
-    test you would run.
+    The implementer ran the FOCUSED tests for exactly this code and reported the
+    results with TDD evidence. Do not re-run the full suite — the human runs the
+    full suite. Run a single focused test only when reading the code raises a
+    specific doubt no existing run answers; never a package-wide suite, race
+    detector run, or high-count loop. If heavier validation seems warranted,
+    recommend it in your report instead of running it.
 
-    Warnings or other noise in the implementer's reported test output are
-    findings — test output should be pristine.
+    Warnings or noise in the implementer's reported focused-test output are
+    findings — that output should be pristine.
 
     ## Part 1: Spec Compliance
 
@@ -167,7 +165,7 @@ Subagent (general-purpose):
 
 **Placeholders:**
 - `[MODEL]` — REQUIRED: reviewer model per SKILL.md Model Selection
-- `[BRIEF_FILE]` — REQUIRED: the task brief file (`scripts/task-brief PLAN N`
+- `[BRIEF_FILE]` — REQUIRED: the task brief file (`scripts/task-brief PLAN <LETTER>`
   prints the path; same file the implementer worked from)
 - `[GLOBAL_CONSTRAINTS]` — the binding requirements copied verbatim from
   the plan's Global Constraints section or the spec: exact values, formats,
@@ -175,10 +173,10 @@ Subagent (general-purpose):
   are already in this template)
 - `[REPORT_FILE]` — REQUIRED: the file the implementer wrote its detailed
   report to
-- `[BASE_SHA]` — commit before this task
-- `[HEAD_SHA]` — current commit
+- `[BASE_TREE]` — tree SHA recorded before this phase started (from snapshot-tree)
+- `[HEAD_TREE]` — tree SHA after implementation (from snapshot-tree, or current working tree)
 - `[DIFF_FILE]` — REQUIRED: the path the controller wrote the review
-  package to (`scripts/review-package BASE HEAD` prints the unique path it
+  package to (`scripts/review-package BASE_TREE` prints the unique path it
   wrote; the package never enters the controller's context)
 
 **Reviewer returns:** Spec Compliance verdict (✅/❌/⚠️), Strengths, Issues

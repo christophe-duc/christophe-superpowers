@@ -1,6 +1,6 @@
 ---
 name: verification-before-completion
-description: Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always
+description: Use when about to claim work is complete, fixed, or passing, before phase/task completion or hand-off - requires running verification commands and confirming output before making any success claims; evidence before assertions always
 ---
 
 # Verification Before Completion
@@ -20,6 +20,10 @@ NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
 ```
 
 If you haven't run the verification command in this message, you cannot claim it passes.
+
+Verification = lint, type-check, format, build/compile, and the focused
+test(s) for the code you changed. Never claim the FULL suite passes — you
+did not run it; the human runs the full suite.
 
 ## The Gate Function
 
@@ -41,7 +45,8 @@ Skip any step = lying, not verifying
 
 | Claim | Requires | Not Sufficient |
 |-------|----------|----------------|
-| Tests pass | Test command output: 0 failures | Previous run, "should pass" |
+| Focused test passes | Focused test command output: 0 failures | Previous run, "should pass" |
+| Full suite passes | N/A — agent does not run the full suite; hand off to human | "focused test passed so all pass" |
 | Linter clean | Linter output: 0 errors | Partial check, extrapolation |
 | Build succeeds | Build command: exit 0 | Linter passing, logs look good |
 | Bug fixed | Test original symptom: passes | Code changed, assumed fixed |
@@ -51,6 +56,7 @@ Skip any step = lying, not verifying
 
 ## Red Flags - STOP
 
+- Claiming the full suite passes — you only ran focused tests; say "focused tests pass, full suite not run."
 - Using "should", "probably", "seems to"
 - Expressing satisfaction before verification ("Great!", "Perfect!", "Done!", etc.)
 - About to commit/push/PR without verification
@@ -77,8 +83,8 @@ Skip any step = lying, not verifying
 
 **Tests:**
 ```
-✅ [Run test command] [See: 34/34 pass] "All tests pass"
-❌ "Should pass now" / "Looks correct"
+✅ [Run focused test] [See: pass] "Focused tests pass; full suite left for the human"
+❌ "All tests pass" / "All tests passing" — you did not run the full suite
 ```
 
 **Regression tests (TDD Red-Green):**
@@ -120,8 +126,8 @@ From 24 failure memories:
 - ANY variation of success/completion claims
 - ANY expression of satisfaction
 - ANY positive statement about work state
-- Committing, PR creation, task completion
-- Moving to next task
+    - Phase/task completion, hand-off
+    - Moving to next task
 - Delegating to agents
 
 **Rule applies to:**

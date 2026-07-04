@@ -83,9 +83,9 @@ Follow this priority order. Explicit user preference always beats observed files
 git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
 ```
 
-**If NOT ignored:** Add to .gitignore, commit the change, then proceed.
+**If NOT ignored:** Add to .gitignore. **Do not commit** — tell the human to commit this change before proceeding.
 
-**Why critical:** Prevents accidentally committing worktree contents to repository.
+**Why critical:** Prevents .gitignore seeing worktree contents; ask the human to commit the .gitignore entry.
 
 #### Create the Worktree
 
@@ -120,22 +120,22 @@ if [ -f go.mod ]; then go mod download; fi
 
 ## Step 3: Verify Clean Baseline
 
-Run tests to ensure workspace starts clean:
+Run lint/build checks to ensure workspace starts clean (test suite is run by the human):
 
 ```bash
-# Use project-appropriate command
-npm test / cargo test / pytest / go test ./...
+# Lint/syntax/build baseline only (test suite is run by the human)
+# e.g.: npm run lint / cargo check / python -m py_compile **/*.py
 ```
 
-**If tests fail:** Report failures, ask whether to proceed or investigate.
+**If lint/build fails:** Report failures, ask whether to proceed or investigate.
 
-**If tests pass:** Report ready.
+**If lint/build passes:** Report ready.
 
 ### Report
 
 ```
 Worktree ready at <full-path>
-Tests passing (<N> tests, 0 failures)
+Lint/build baseline clean (tests deferred to human)
 Ready to implement <feature-name>
 ```
 
@@ -151,10 +151,9 @@ Ready to implement <feature-name>
 | `worktrees/` exists | Use it (verify ignored) |
 | Both exist | Use `.worktrees/` |
 | Neither exists | Check instruction file, then default `.worktrees/` |
-| Directory not ignored | Add to .gitignore + commit |
+| Directory not ignored | Add to .gitignore + ask human to commit |
 | Permission error on create | Sandbox fallback, work in place |
-| Tests fail during baseline | Report failures + ask |
-| No package.json/Cargo.toml | Skip dependency install |
+| Tests fail during baseline | Report failures + ask || No package.json/Cargo.toml | Skip dependency install |
 
 ## Common Mistakes
 
@@ -171,14 +170,14 @@ Ready to implement <feature-name>
 ### Skipping ignore verification
 
 - **Problem:** Worktree contents get tracked, pollute git status
-- **Fix:** Always use `git check-ignore` before creating project-local worktree
+- **Fix:** Always use `git check-ignore` before creating project-local worktree; ask the human to commit the .gitignore entry
 
 ### Assuming directory location
 
 - **Problem:** Creates inconsistency, violates project conventions
 - **Fix:** Follow priority: explicit instructions > existing project-local directory > default
 
-### Proceeding with failing tests
+### Proceeding with failing lint/build baseline
 
 - **Problem:** Can't distinguish new bugs from pre-existing issues
 - **Fix:** Report failures, get explicit permission to proceed
@@ -190,8 +189,8 @@ Ready to implement <feature-name>
 - Use `git worktree add` when you have a native worktree tool (e.g., `EnterWorktree`). This is the #1 mistake — if you have it, use it.
 - Skip Step 1a by jumping straight to Step 1b's git commands
 - Create worktree without verifying it's ignored (project-local)
-- Skip baseline test verification
-- Proceed with failing tests without asking
+- Skip baseline lint/build verification
+- Proceed with a failing lint/build baseline without asking
 
 **Always:**
 - Run Step 0 detection first
@@ -199,4 +198,4 @@ Ready to implement <feature-name>
 - Follow directory priority: explicit instructions > existing project-local directory > default
 - Verify directory is ignored for project-local
 - Auto-detect and run project setup
-- Verify clean test baseline
+- Verify clean lint/build baseline

@@ -20,19 +20,18 @@ Subagent (general-purpose):
 
     [PLAN_OR_REQUIREMENTS]
 
-    ## Git Range to Review
+    ## Diff to review (working tree vs. baseline)
 
-    **Base:** [BASE_SHA]
-    **Head:** [HEAD_SHA]
+    **Baseline tree:** [BASE_TREE]
+    **Head tree:** [HEAD_TREE]
 
-    ```bash
-    git diff --stat [BASE_SHA]..[HEAD_SHA]
-    git diff [BASE_SHA]..[HEAD_SHA]
-    ```
+    Read the review-package diff file. Fallback:
+        git diff --stat [BASE_TREE] [HEAD_TREE]
+        git diff [BASE_TREE] [HEAD_TREE]
 
     ## Read-Only Review
 
-    Your review is read-only on this checkout. Do not mutate the working tree, the index, HEAD, or branch state in any way. Use tools like `git show`, `git diff`, and `git log` to inspect history. If you need a working copy of a different revision, check it out into a separate temporary directory (e.g. `git worktree add /tmp/review-[SHA] [SHA]`) — never move HEAD on this checkout.
+    Your review is read-only on this checkout. Do not mutate the working tree, the index, HEAD, or branch state in any way. The review-package diff is your view of the change; if you must inspect a file's full content, read it from the working tree (it already holds the head state) — do not try to check out a tree object.
 
     ## What to Check
 
@@ -58,7 +57,7 @@ Subagent (general-purpose):
     - Tests verify real behavior, not mocks?
     - Edge cases covered?
     - Integration tests where they matter?
-    - All tests passing?
+    - Tests present and meaningful? (Tests are written by the agent but *run by the human* — do not expect passing-test evidence. Check that tests exist and cover real behavior.)
 
     **Production readiness:**
     - Migration strategy if schema changed?
@@ -104,7 +103,7 @@ Subagent (general-purpose):
 
     ### Assessment
 
-    **Ready to merge?** [Yes | No | With fixes]
+    **Ready to hand off?** [Yes | No | With fixes]
 
     **Reasoning:** [1-2 sentence technical assessment]
 
@@ -128,8 +127,8 @@ Subagent (general-purpose):
 **Placeholders:**
 - `[DESCRIPTION]` — brief summary of what was built
 - `[PLAN_OR_REQUIREMENTS]` — what it should do (plan file path, task text, or requirements)
-- `[BASE_SHA]` — starting commit
-- `[HEAD_SHA]` — ending commit
+- `[BASE_TREE]` — baseline tree SHA (from snapshot-tree, recorded before work started)
+- `[HEAD_TREE]` — head tree SHA (from snapshot-tree, or current working tree)
 
 **Reviewer returns:** Strengths, Issues (Critical / Important / Minor), Recommendations, Assessment
 
@@ -166,7 +165,7 @@ Subagent (general-purpose):
 
 ### Assessment
 
-**Ready to merge: With fixes**
+**Ready to hand off: With fixes**
 
 **Reasoning:** Core implementation is solid with good architecture and tests. Important issues (help text, date validation) are easily fixed and don't affect core functionality.
 ```

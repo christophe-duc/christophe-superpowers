@@ -1,6 +1,6 @@
 ---
 name: dispatching-parallel-agents
-description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
+description: Use when facing 2+ independent problems that can be investigated read-only in parallel — agents diagnose and report; the controller applies any fixes one at a time.
 ---
 
 # Dispatching Parallel Agents
@@ -11,7 +11,7 @@ You delegate tasks to specialized agents with isolated context. By precisely cra
 
 When you have multiple unrelated failures (different test files, different subsystems, different bugs), investigating them sequentially wastes time. Each investigation is independent and can happen in parallel.
 
-**Core principle:** Dispatch one agent per independent problem domain. Let them work concurrently.
+**Core principle:** Dispatch one read-only investigation agent per independent problem domain. They diagnose in parallel and report back; the controller applies fixes serially. Never dispatch two file-modifying agents concurrently.
 
 ## When to Use
 
@@ -46,6 +46,8 @@ digraph when_to_use {
 
 ## The Pattern
 
+**Read-only only.** Agents dispatched in parallel must not modify files — they investigate and return a diagnosis + recommended fix. The controller (or a serial follow-up agent) applies the actual changes one at a time, so two writers never race on the same files.
+
 ### 1. Identify Independent Domains
 
 Group failures by what's broken:
@@ -59,30 +61,30 @@ Each domain is independent - fixing tool approval doesn't affect abort tests.
 
 Each agent gets:
 - **Specific scope:** One test file or subsystem
-- **Clear goal:** Make these tests pass
-- **Constraints:** Don't change other code
-- **Expected output:** Summary of what you found and fixed
+- **Clear goal:** Diagnose the root cause and recommend a fix
+- **Constraints:** Read-only — do not modify files; report findings only.
+- **Expected output:** Summary of root cause + recommended fix
 
 ### 3. Dispatch in Parallel
 
 Issue all three subagent dispatches in the same response — they run in parallel:
 
 ```text
-Subagent (general-purpose): "Fix agent-tool-abort.test.ts failures"
-Subagent (general-purpose): "Fix batch-completion-behavior.test.ts failures"
-Subagent (general-purpose): "Fix tool-approval-race-conditions.test.ts failures"
+Subagent (general-purpose): "Investigate agent-tool-abort.test.ts failures and report root cause + recommended fix (read-only)"
+Subagent (general-purpose): "Investigate batch-completion-behavior.test.ts failures and report root cause + recommended fix (read-only)"
+Subagent (general-purpose): "Investigate tool-approval-race-conditions.test.ts failures and report root cause + recommended fix (read-only)"
 # All three run concurrently.
 ```
 
 Multiple dispatch calls in one response = parallel execution. One per response = sequential.
 
-### 4. Review and Integrate
+### 4. Apply Fixes and Verify
 
 When agents return:
-- Read each summary
+- Read each diagnosis
+- Apply the recommended fixes one at a time
+- Run focused tests for each change; the human runs the full suite.
 - Verify fixes don't conflict
-- Run full test suite
-- Integrate all changes
 
 ## Agent Prompt Structure
 
@@ -92,7 +94,7 @@ Good agent prompts are:
 3. **Specific about output** - What should the agent return?
 
 ```markdown
-Fix the 3 failing tests in src/agents/agent-tool-abort.test.ts:
+Investigate the 3 failing tests in src/agents/agent-tool-abort.test.ts and report root cause + recommended fix (read-only — do not modify files):
 
 1. "should abort tool with partial output capture" - expects 'interrupted at' in message
 2. "should handle mixed completed and aborted tools" - fast tool aborted instead of completed
@@ -102,17 +104,14 @@ These are timing/race condition issues. Your task:
 
 1. Read the test file and understand what each test verifies
 2. Identify root cause - timing issues or actual bugs?
-3. Fix by:
-   - Replacing arbitrary timeouts with event-based waiting
-   - Fixing bugs in abort implementation if found
-   - Adjusting test expectations if testing changed behavior
+3. Report your diagnosis and recommended fix. Do NOT just say "increase timeouts" — find the real issue.
 
-Do NOT just increase timeouts - find the real issue.
-
-Return: Summary of what you found and what you fixed.
+Return: Summary of root cause and recommended fix. Do NOT modify any files.
 ```
 
 ## Common Mistakes
+
+**❌ Letting a parallel agent edit files — parallel writers race. ✅ Parallel agents are read-only; fixes are applied serially.**
 
 **❌ Too broad:** "Fix all the tests" - agent gets lost
 **✅ Specific:** "Fix agent-tool-abort.test.ts" - focused scope
@@ -151,12 +150,12 @@ Agent 2 → Fix batch-completion-behavior.test.ts
 Agent 3 → Fix tool-approval-race-conditions.test.ts
 ```
 
-**Results:**
-- Agent 1: Replaced timeouts with event-based waiting
-- Agent 2: Fixed event structure bug (threadId in wrong place)
-- Agent 3: Added wait for async tool execution to complete
+**Investigation results:**
+- Agent 1: Diagnosed timing issues — recommended event-based waiting
+- Agent 2: Diagnosed event structure bug (threadId in wrong place) — recommended fix
+- Agent 3: Diagnosed missing async wait — recommended fix
 
-**Integration:** All fixes independent, no conflicts, full suite green
+**Integration:** 3 agents investigated in parallel; controller applied each fix serially and ran focused tests
 
 **Time saved:** 3 problems solved in parallel vs sequentially
 
@@ -172,14 +171,14 @@ Agent 3 → Fix tool-approval-race-conditions.test.ts
 After agents return:
 1. **Review each summary** - Understand what changed
 2. **Check for conflicts** - Did agents edit same code?
-3. **Run full suite** - Verify all fixes work together
+3. **Run focused tests** - Run focused tests for each integrated fix; the human runs the full suite
 4. **Spot check** - Agents can make systematic errors
 
 ## Real-World Impact
 
 From debugging session (2025-10-03):
 - 6 failures across 3 files
-- 3 agents dispatched in parallel
+- 3 agents investigated in parallel (read-only)
 - All investigations completed concurrently
-- All fixes integrated successfully
+- Controller applied fixes serially, ran focused tests after each
 - Zero conflicts between agent changes

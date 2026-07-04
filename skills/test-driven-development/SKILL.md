@@ -5,6 +5,8 @@ description: Use when implementing any feature or bugfix, before writing impleme
 
 # Test-Driven Development (TDD)
 
+> **Environment policy:** Run only the **focused** test for the code you're changing (a single test file or case) to observe RED then GREEN. Do **not** run the full test suite — the human runs the full suite and starts the broader testing phase. Lint/type/build checks are always fine.
+
 ## Overview
 
 Write the test first. Watch it fail. Write minimal code to pass.
@@ -118,6 +120,8 @@ Vague name, tests mock not code
 npm test path/to/test.test.ts
 ```
 
+Run the focused test only — never the whole suite.
+
 Confirm:
 - Test fails (not errors)
 - Failure message is expected
@@ -175,7 +179,7 @@ npm test path/to/test.test.ts
 
 Confirm:
 - Test passes
-- Other tests still pass
+- Focused test passes (the human runs the full suite to catch cross-cutting regressions).
 - Output pristine (no errors, warnings)
 
 **Test fails?** Fix code, not test.
@@ -284,6 +288,7 @@ Tests-first force edge case discovery before implementing. Tests-after verify yo
 - "Already spent X hours, deleting is wasteful"
 - "TDD is dogmatic, I'm being pragmatic"
 - "This is different because..."
+- Running the full test suite — run only the focused test; the human runs the suite.
 
 **All of these mean: Delete code. Start over with TDD.**
 
@@ -301,7 +306,7 @@ test('rejects empty email', async () => {
 
 **Verify RED**
 ```bash
-$ npm test
+$ npm test path/to/form.test.ts
 FAIL: expected 'Email required', got undefined
 ```
 
@@ -317,7 +322,7 @@ function submitForm(data: FormData) {
 
 **Verify GREEN**
 ```bash
-$ npm test
+$ npm test path/to/form.test.ts
 PASS
 ```
 
@@ -332,7 +337,7 @@ Before marking work complete:
 - [ ] Watched each test fail before implementing
 - [ ] Each test failed for expected reason (feature missing, not typo)
 - [ ] Wrote minimal code to pass each test
-- [ ] All tests pass
+- [ ] Focused test passes; full suite left for the human
 - [ ] Output pristine (no errors, warnings)
 - [ ] Tests use real code (mocks only if unavoidable)
 - [ ] Edge cases and errors covered

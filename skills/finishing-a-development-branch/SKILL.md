@@ -1,58 +1,57 @@
 ---
 name: finishing-a-development-branch
-description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
+description: Use when implementation is complete and lint/build passes, and you need to hand the work off - verifies lint/build and presents an uncommitted-changes summary for the human to commit, merge, or PR.
 ---
 
 # Finishing a Development Branch
 
 ## Overview
 
-Guide completion of development work by presenting clear options and handling chosen workflow.
+Verify lint/build, summarize uncommitted changes, and hand off to the human for all git write operations.
 
-**Core principle:** Verify tests → Detect environment → Present options → Execute choice → Clean up.
+**Core principle:** Verify lint/build → Summarize uncommitted changes → Hand off to the human.
 
 **Announce at start:** "I'm using the finishing-a-development-branch skill to complete this work."
 
 ## The Process
 
-### Step 1: Verify Tests
+### Step 1: Verify Lint/Syntax/Build
 
-**Before presenting options, verify tests pass:**
+Run the project's lint, type-check, and build commands (do **not** run the full test suite — the human starts the testing phase):
 
 ```bash
-# Run project's test suite
-npm test / cargo test / pytest / go test ./...
+# Examples (use project-appropriate command):
+npm run lint && npm run build
+cargo check && cargo clippy
+python -m py_compile **/*.py && flake8
 ```
 
-**If tests fail:**
+**If lint/build fails:**
 ```
-Tests failing (<N> failures). Must fix before completing:
-
+Build/lint failing. Must fix before handing off:
 [Show failures]
-
-Cannot proceed with merge/PR until tests pass.
 ```
 
 Stop. Don't proceed to Step 2.
 
-**If tests pass:** Continue to Step 2.
+**If lint/build passes:** Continue to Step 2.
 
 ### Step 2: Detect Environment
 
-**Determine workspace state before presenting options:**
+**Determine workspace state:**
 
 ```bash
 GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
 GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
 ```
 
-This determines which menu to show and how cleanup works:
+This determines the worktree path and branch name used in the handoff summary.
 
-| State | Menu | Cleanup |
-|-------|------|---------|
-| `GIT_DIR == GIT_COMMON` (normal repo) | Standard 4 options | No worktree to clean up |
-| `GIT_DIR != GIT_COMMON`, named branch | Standard 4 options | Provenance-based (see Step 6) |
-| `GIT_DIR != GIT_COMMON`, detached HEAD | Reduced 3 options (no merge) | No cleanup (externally managed) |
+| State | Notes |
+|-------|-------|
+| `GIT_DIR == GIT_COMMON` (normal repo) | No linked worktree |
+| `GIT_DIR != GIT_COMMON`, named branch | Linked worktree |
+| `GIT_DIR != GIT_COMMON`, detached HEAD | Externally managed workspace |
 
 ### Step 3: Determine Base Branch
 
@@ -63,179 +62,85 @@ git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
 
 Or ask: "This branch split from main - is that correct?"
 
-### Step 4: Present Options
+### Step 4: Present Handoff Summary
 
-**Normal repo and named-branch worktree — present exactly these 4 options:**
-
-```
-Implementation complete. What would you like to do?
-
-1. Merge back to <base-branch> locally
-2. Push and create a Pull Request
-3. Keep the branch as-is (I'll handle it later)
-4. Discard this work
-
-Which option?
-```
-
-**Detached HEAD — present exactly these 3 options:**
-
-```
-Implementation complete. You're on a detached HEAD (externally managed workspace).
-
-1. Push as new branch and create a Pull Request
-2. Keep as-is (I'll handle it later)
-3. Discard this work
-
-Which option?
-```
-
-**Don't add explanation** - keep options concise.
-
-### Step 5: Execute Choice
-
-#### Option 1: Merge Locally
+Generate a summary of uncommitted changes for the human. Use `snapshot-tree`
+to capture the full working tree including **untracked files** — `git diff
+--stat HEAD` shows staged and unstaged changes to tracked files but silently
+omits brand-new untracked files, which are often the bulk of new work.
 
 ```bash
-# Get main repo root for CWD safety
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-
-# Merge first — verify success before removing anything
-git checkout <base-branch>
-git pull
-git merge <feature-branch>
-
-# Verify tests on merged result
-<test command>
-
-# Only after merge succeeds: cleanup worktree (Step 6), then delete branch
+HEAD_TREE=$(skills/subagent-driven-development/scripts/snapshot-tree)
+BASE_COMMIT=$(git rev-parse HEAD)
+git status
+git diff --stat "$BASE_COMMIT" "$HEAD_TREE"
 ```
 
-Then: Cleanup worktree (Step 6), then delete branch:
+Report:
+```
+Work is complete and left **uncommitted** in the working tree.
+
+Worktree: <path>
+Branch: <branch-name>
+Changes since HEAD:
+[git diff --stat output]
+
+Review the changes and commit / merge / open a PR yourself.
+
+If you want to **discard all uncommitted changes** instead, type `discard` to confirm.
+```
+
+Wait for the human's response. If they type `discard`, proceed to Step 5 (Discard). Otherwise, work is done.
+
+### Step 5: Discard Uncommitted Changes (only if human typed `discard`)
 
 ```bash
-git branch -d <feature-branch>
+# Discard all uncommitted changes in the working tree and index
+git restore .
+git clean -fd
 ```
 
-#### Option 2: Push and Create PR
+**Do NOT** delete branches or remove worktrees — leave that to the human.
 
-```bash
-# Push branch
-git push -u origin <feature-branch>
-```
-
-**Do NOT clean up worktree** — user needs it alive to iterate on PR feedback.
-
-#### Option 3: Keep As-Is
-
-Report: "Keeping branch <name>. Worktree preserved at <path>."
-
-**Don't cleanup worktree.**
-
-#### Option 4: Discard
-
-**Confirm first:**
-```
-This will permanently delete:
-- Branch <name>
-- All commits: <commit-list>
-- Worktree at <path>
-
-Type 'discard' to confirm.
-```
-
-Wait for exact confirmation.
-
-If confirmed:
-```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-```
-
-Then: Cleanup worktree (Step 6), then force-delete branch:
-```bash
-git branch -D <feature-branch>
-```
-
-### Step 6: Cleanup Workspace
-
-**Only runs for Options 1 and 4.** Options 2 and 3 always preserve the worktree.
-
-```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-WORKTREE_PATH=$(git rev-parse --show-toplevel)
-```
-
-**If `GIT_DIR == GIT_COMMON`:** Normal repo, no worktree to clean up. Done.
-
-**If worktree path is under `.worktrees/` or `worktrees/`:** Superpowers created this worktree — we own cleanup.
-
-```bash
-MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
-cd "$MAIN_ROOT"
-git worktree remove "$WORKTREE_PATH"
-git worktree prune  # Self-healing: clean up any stale registrations
-```
-
-**Otherwise:** The host environment (harness) owns this workspace. Do NOT remove it. If your platform provides a workspace-exit tool, use it. Otherwise, leave the workspace in place.
+Report: "Uncommitted changes discarded. Working tree is clean."
 
 ## Quick Reference
 
-| Option | Merge | Push | Keep Worktree | Cleanup Branch |
-|--------|-------|------|---------------|----------------|
-| 1. Merge locally | yes | - | - | yes |
-| 2. Create PR | - | yes | yes | - |
-| 3. Keep as-is | - | - | yes | - |
-| 4. Discard | - | - | - | yes (force) |
+| Outcome | Action |
+|---------|--------|
+| Lint/build OK | Generate summary, hand off to human |
+| Lint/build fail | Fix failures, then hand off |
+| Human: discard | git restore + git clean (no branch ops) |
 
 ## Common Mistakes
 
-**Skipping test verification**
-- **Problem:** Merge broken code, create failing PR
-- **Fix:** Always verify tests before offering options
+**Running the test suite**
+- **Problem:** Not the agent's job — the human starts the testing phase
+- **Fix:** Run lint/build only; skip test execution
 
-**Open-ended questions**
-- **Problem:** "What should I do next?" is ambiguous
-- **Fix:** Present exactly 4 structured options (or 3 for detached HEAD)
+**Committing, pushing, or merging**
+- **Problem:** These are git write operations the human owns
+- **Fix:** Hand off to the human for all git write operations
 
-**Cleaning up worktree for Option 2**
-- **Problem:** Remove worktree user needs for PR iteration
-- **Fix:** Only cleanup for Options 1 and 4
-
-**Deleting branch before removing worktree**
-- **Problem:** `git branch -d` fails because worktree still references the branch
-- **Fix:** Merge first, remove worktree, then delete branch
-
-**Running git worktree remove from inside the worktree**
-- **Problem:** Command fails silently when CWD is inside the worktree being removed
-- **Fix:** Always `cd` to main repo root before `git worktree remove`
-
-**Cleaning up harness-owned worktrees**
-- **Problem:** Removing a worktree the harness created causes phantom state
-- **Fix:** Only clean up worktrees under `.worktrees/` or `worktrees/`
+**Omitting untracked files from the summary**
+- **Problem:** `git diff --stat HEAD` silently omits brand-new untracked files
+- **Fix:** Use `snapshot-tree` to capture the full working tree including untracked files
 
 **No confirmation for discard**
-- **Problem:** Accidentally delete work
+- **Problem:** Accidentally discard work
 - **Fix:** Require typed "discard" confirmation
 
 ## Red Flags
 
 **Never:**
-- Proceed with failing tests
-- Merge without verifying tests on result
-- Delete work without confirmation
-- Force-push without explicit request
-- Remove a worktree before confirming merge success
-- Clean up worktrees you didn't create (provenance check)
-- Run `git worktree remove` from inside the worktree
+- Proceed with failing lint/build
+- Run the test suite
+- Create git commits, push, merge, or delete branches
+- Auto-remove worktrees without the human deciding
+- Discard changes without typed `discard` confirmation
 
 **Always:**
-- Verify tests before offering options
-- Detect environment before presenting menu
-- Present exactly 4 options (or 3 for detached HEAD)
-- Get typed confirmation for Option 4
-- Clean up worktree for Options 1 & 4 only
-- `cd` to main repo root before worktree removal
-- Run `git worktree prune` after removal
+- Run lint/build before handing off
+- Present a clear diff summary (including untracked files via snapshot-tree)
+- Preserve the working tree for human review
+- Require typed confirmation for discard

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Capture the full working tree (tracked + untracked, honouring .gitignore)
+# as a git tree object WITHOUT touching HEAD, the real index, or any branch.
+# Prints the tree SHA. Safe to call at any time — no side effects on history.
+#
+# A fresh (empty) throw-away index + `git add -A` stages every tracked and
+# untracked file in the working tree, which is exactly a full snapshot — so
+# we do NOT `git read-tree HEAD` first. That also lets this work in a repo
+# with zero commits (no HEAD to read), matching review-package's promise
+# that diffs work whether or not any commits exist.
+#
+# Usage: snapshot-tree
+set -euo pipefail
+
+idx=$(mktemp)
+rm -f "$idx"                      # start from a truly empty index
+trap 'rm -f "$idx"' EXIT
+
+GIT_INDEX_FILE="$idx" git add -A
+GIT_INDEX_FILE="$idx" git write-tree

@@ -21,13 +21,18 @@ Load plan, review critically, execute all tasks, report when complete.
 3. If concerns: Raise them with your human partner before starting
 4. If no concerns: Create todos for the plan items and proceed
 
-### Step 2: Execute Tasks
+### Step 2: Execute Phases
 
-For each task:
-1. Mark as in_progress
-2. Follow each step exactly (plan has bite-sized steps)
-3. Run verifications as specified
-4. Mark as completed
+For each `## <Letter>` phase in the plan:
+1. Mark phase as in_progress
+2. Implement all `### <Letter><N>` subtasks in sequence
+3. Run focused tests for the changed code (RED/GREEN) plus lint/syntax/build checks — do **not** run the full suite
+4. Mark phase as completed
+5. Auto-continue to the next phase without stopping
+
+Do not run the full test suite at any point. Focused test runs (a single
+test file/case for the code just changed), lint, type-check, and compile are
+fine. Never create git commits.
 
 ### Step 3: Complete Development
 
@@ -61,6 +66,9 @@ After all tasks complete and verified:
 - Reference skills when plan says to
 - Stop when blocked, don't guess
 - Never start implementation on main/master branch without explicit user consent
+- Never commit.
+- Never run the full test suite (focused tests are fine; the human runs the full suite).
+- Execute one phase at a time (all subtasks within it), then auto-continue to the next phase.
 
 ## Integration
 
